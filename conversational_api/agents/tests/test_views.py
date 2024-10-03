@@ -5,31 +5,6 @@ from rest_framework import status
 from unittest.mock import patch
 from agents.models import Agent, ConversationalPathway
 
-# Fixture to set up an API client for testing
-@pytest.fixture
-def api_client():
-    return APIClient()
-
-# Fixture for a sample agent data
-@pytest.fixture
-def sample_agent_data():
-    return {
-        'name': 'Test Agent',
-        'prompt': '<h1>Hello</h1>',
-        'voice': 'default_voice',
-        'max_duration': 30
-    }
-
-# Fixture for a sample conversational pathway data
-@pytest.fixture
-def sample_pathway_data():
-    return {
-        'name': 'Test Pathway',
-        'description': 'A test pathway',
-        'nodes': {},
-        'edges': {}
-    }
-
 @pytest.mark.django_db
 def test_create_agent(api_client, sample_agent_data):
     url = reverse('agent-list')  # Assuming this is your agent-list route name

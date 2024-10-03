@@ -4,30 +4,6 @@ from django.urls import reverse
 from unittest.mock import patch
 from agents.models import Agent, ConversationalPathway
 
-# Fixture to set up an API client for testing
-@pytest.fixture
-def api_client():
-    return APIClient()
-
-# Fixture for a sample agent data
-@pytest.fixture
-def sample_agent_data():
-    return {
-        'name': 'Integration Test Agent',
-        'prompt': '<h1>Hello</h1>',
-        'voice': 'default_voice',
-        'max_duration': 30
-    }
-
-# Fixture for a sample conversational pathway data
-@pytest.fixture
-def sample_pathway_data():
-    return {
-        'name': 'Integration Test Pathway',
-        'description': 'An integration test pathway',
-        'nodes': {},
-        'edges': {}
-    }
 
 # Integration Tests for AgentViewSet
 @pytest.mark.django_db
