@@ -25,6 +25,8 @@ class Agent(models.Model):
     version = models.IntegerField(default=0)
     
     def save(self, *args, **kwargs):
+        if self.pk:  # Check if it's an update
+            self.version += 1
         super().save(*args, **kwargs)
 
 class ConversationalPathway(models.Model):
@@ -41,4 +43,6 @@ class ConversationalPathway(models.Model):
         ordering = ['created_at'] 
         
     def save(self, *args, **kwargs):
+        if self.pk:  # Check if it's an update
+            self.version += 1
         super().save(*args, **kwargs)
