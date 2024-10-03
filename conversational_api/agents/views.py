@@ -45,7 +45,7 @@ class AgentViewSet(viewsets.ModelViewSet):
                 agent.bland_ai_id = bland_ai_id
                 agent.save()
                 logger.info(f"Agent '{agent.name}' synchronized with Bland AI, bland_ai_id: {bland_ai_id}.")
-
+                
         except APIException as e:
             logger.error(f"APIException during agent creation: {e}", exc_info=True)
             agent.delete()
@@ -91,7 +91,7 @@ class AgentViewSet(viewsets.ModelViewSet):
 
                 # Now delete the agent from the local database
                 instance.delete()
-                logger.info(f'Agent "{instance.name}" successfully deleted locally.')
+                logger.info(f'Agent with name "{instance.name}" successfully deleted locally.')
         except APIException as e:
             logger.error(f"APIException during agent deletion: {e}", exc_info=True)
             raise
@@ -190,24 +190,50 @@ class ConversationalPathwayViewSet(viewsets.ModelViewSet):
                 
                 pathway.bland_ai_pathway_id = bland_ai_pathway_id
                 pathway.save()
-                logger.info(f"Conversational Pathway '{pathway.name}' synchronized with Bland AI, bland_ai_id: {bland_ai_pathway_id}.")
+                logger.info(f"Conversational Pathway '{pathway.name}' synchronized with Bland AI, bland_ai_pathway_id: {bland_ai_pathway_id}.")
+                
+                # Serialize the pathway instance to JSON format
+                response_data = {
+                    'message': 'Conversational Pathway created successfully!',
+                    'id': pathway.id,
+                    'name': pathway.name,
+                    'description': pathway.description,
+                    'bland_ai_pathway_id': bland_ai_pathway_id,
+                    'nodes': pathway.nodes,
+                    'edges': pathway.edges,
+                    'created_at': pathway.created_at,
+                    'updated_at': pathway.updated_at,
+                    }
 
+                return Response(response_data, status=status.HTTP_201_CREATED)
         except APIException as e:
             logger.error(f"APIException during pathway creation: {e}", exc_info=True)
             pathway.delete()
-            raise
+            return Response({"detail": "Error occurred while creating the pathway."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
     def perform_update(self, serializer):
         """
-        Called when updating an existing ConversationalPathway instance. Synchronizes with Bland AI.
+        Updates a Pathway instance and synchronizes the changes with Bland AI.
         """
-        pathway = serializer.save()
         client = BlandClient()
         try:
-            client.update_conversational_pathway(pathway)
-        except Exception as e:
-            logger.error(f"Error updating pathway in Bland AI: {e}")
-            raise
+            with transaction.atomic():
+                pathway = serializer.save()
+                logger.info(f"Conversational Pathway '{pathway.name}' updated locally with ID {pathway.id}.")
+
+                # Ensure `bland_ai_id` is present
+                if not pathway.bland_ai_pathway_id:
+                    logger.error("Conversational Pathway does not have a valid bland_ai_pathway_id.")
+                    raise APIException("Conversational Pathway lacks a valid Bland AI Pathway ID.")
+
+                # Update the agent in Bland AI
+                client.update_conversational_pathway(pathway, self.request.data)
+                logger.info(f"Agent '{pathway.name}' synchronized with Bland AI.")
+                return Response(status=status.HTTP_200_OK)
+        except APIException as e:
+            logger.error(f"APIException during pathway update: {e}", exc_info=True)
+            return Response({"detail": "Error occurred while updating the pathway."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     def perform_destroy(self, instance):
         """
@@ -215,9 +241,35 @@ class ConversationalPathwayViewSet(viewsets.ModelViewSet):
         """
         client = BlandClient()
         try:
-            client.delete_conversational_pathway(instance.bland_ai_pathway_id)
-            logger.info(f"Pathway {instance.name} successfully deleted from Bland AI.")
-        except Exception as e:
-            logger.error(f"Error deleting pathway in Bland AI: {e}")
+            with transaction.atomic():
+                # Attempt to delete from Bland AI
+                if instance.bland_ai_pathway_id:
+                    client.delete_conversational_pathway(instance.bland_ai_pathway_id)
+                    logger.info(f'Agent "{instance.name}" successfully deleted from Bland AI.')
+                else:
+                    logger.warning(f'Agent "{instance.name}" has no bland_ai_pathway_id. Skipping Bland AI deletion.')
+
+                # Now delete the agent from the local database
+                instance.delete()
+                logger.info(f'Conveersational Pathway with name: "{instance.name}" successfully deleted locally.')
+                # Return a success response to the user
+                return Response(
+                    {
+                        "message": "Conversational Pathway deleted successfully!",
+                        "id": instance.id,
+                        "name": instance.name,
+                        "bland_ai_pathway_id": instance.bland_ai_pathway_id
+                    },
+                    status=status.HTTP_200_OK
+                )
+        except APIException as e:
+            logger.error(f"APIException during pathway deletion: {e}", exc_info=True)
             raise
-        instance.delete()
+        except Exception as e:
+            logger.error(f"Unexpected error during pathway deletion: {e}", exc_info=True)
+            return Response(
+            {
+                "message": "Failed to delete the pathway.",
+                "error": str(e)
+            },
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR)

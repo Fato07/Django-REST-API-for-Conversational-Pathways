@@ -2,6 +2,7 @@
 *.log
 *.pot
 *.pyc
+/Users/fathindosunmu/DEV/MyProjects/Django-REST-API-for-Conversational-Pathways/conversational_api/conversational_api/__pycache__/settings.cpython-312.pyc
 __pycache__
 db.sqlite3
 media

@@ -151,13 +151,6 @@ class BlandClient:
             # Make the request to delete the agent from Bland AI
             response = self.session.post(url, timeout=30)
 
-            # Log the response
-            logger.info(f"Response Status Code: {response.status_code}")
-            logger.info(f"Response Text: {response.text}")
-
-            # Raise an exception for 4xx/5xx responses
-            response.raise_for_status()
-
             # Return the parsed response data
             return response.json()
 
@@ -180,63 +173,44 @@ class BlandClient:
             
             # Send the request
             response = self.session.post(url, json=payload, timeout=30)
+            response_data = response.json()
             
             if response.status_code == 200:
                 logger.info(f"Conversational Pathway Created in Bland Systems successfully")
-                 # Log the parsed response
-                response_data = response.json()
                 logger.info(f"Pathway Data: {json.dumps(response_data, indent=4)}")
                 
-            # Log the response status code and body
-            logger.info(f"Response Status Code: {response.status_code}")
-            logger.info(f"Response Text: {response.text}")
-
-            # Raise an exception for 4xx/5xx responses
-            response.raise_for_status()
-
-            response_data = response.json()
-            print(response)
-            
             return response_data.get("pathway_id")
         except requests.exceptions.RequestException as e:
             logger.error(f"Error creating conversational pathway in Bland AI: {e}", exc_info=True)
             raise
 
-    def update_conversational_pathway(self, pathway):
+    def update_conversational_pathway(self, pathway, request_data):
         """
         Update a conversational pathway in Bland AI with the correct structure.
         """
         url = f"{self.base_url}/convo_pathway/{pathway.bland_ai_pathway_id}"
-
-        # Ensure the payload matches the required structure of nodes and edges
-        payload = {
-            "name": pathway.name,
-            "description": pathway.description,
-            "nodes": self._format_nodes(pathway.nodes),
-            "edges": self._format_edges(pathway.edges)
-        }
-
+        payload = self._prepare_pathway_payload(pathway, request_data)
+        
         try:
             # Log the payload before sending the request for debugging
             logger.info(f"Updating conversational pathway at URL: {url}")
-            logger.info(f"Payload: {payload}")
+            logger.info(f"Payload: {json.dumps(payload, indent=4)}")
 
             # Send the update request to Bland AI
             response = self.session.post(url, json=payload, timeout=30)
+            
+            if response.status_code == 200:
+                logger.info(f"Conversational Pathway Updated in Bland Systems successfully")
+                response_data = response.json()
+                logger.info(f"Updated Pathway Data: {json.dumps(response_data, indent=4)}")
 
-            # Log the full response body
-            logger.info(f"Response Status Code: {response.status_code}")
-            logger.info(f"Response Text: {response.text}")
-
-            response.raise_for_status()
             return response.json()
-
         except requests.exceptions.RequestException as e:
             # Log the error with response details for better debugging
             logger.error(f"Error updating conversational pathway in Bland AI: {e}", exc_info=True)
             if e.response is not None:
                 logger.error(f"Bland AI response status code: {e.response.status_code}")
-                logger.error(f"Bland AI response text: {e.response.text}")
+                logger.error(f"Bland AI response text: {json.dumps(e.response.text, indent=4)}")
             raise
 
     def get_conversational_pathway(self, bland_ai_pathway_id):
@@ -259,26 +233,6 @@ class BlandClient:
             logger.error(f"Error retrieving conversational pathway from Bland AI: {e}", exc_info=True)
             raise
         
-    # def get_all_conversational_pathways(self):
-    #     """
-    #     Retrieve a conversational pathway from Bland AI.
-    #     """
-    #     url = f"{self.base_url}/convo_pathway"
-
-    #     try:
-    #         logger.info(f"Retrieving all conversational pathways from Bland AI at URL: {url}")
-
-    #         response = self.session.get(url, timeout=30)
-    #         logger.info(f"Response Status Code: {response.status_code}")
-    #         logger.info(f"Response Text: {response.text}")
-
-    #         response.raise_for_status()
-
-    #         return response.json()
-    #     except requests.exceptions.RequestException as e:
-    #         logger.error(f"Error retrieving conversational pathway from Bland AI: {e}", exc_info=True)
-    #         raise
-
     def delete_conversational_pathway(self, bland_ai_pathway_id):
         """
         Delete a conversational pathway in Bland AI.
@@ -286,50 +240,14 @@ class BlandClient:
         url = f"{self.base_url}/convo_pathway/{bland_ai_pathway_id}"
         
         try:
-            logger.info(f"Deleting conversational pathway at URL: {url}")
+            logger.info(f"Sending delete request for conversational pathway at URL: {url}")
 
+            # Make the request to delete the pathway from Bland AI
             response = self.session.delete(url, timeout=30)
-            logger.info(f"Response Status Code: {response.status_code}")
-            logger.info(f"Response Text: {response.text}")
-
-            response.raise_for_status()
-
+            
+            # Return the parsed response data
             return response.json()
+        
         except requests.exceptions.RequestException as e:
             logger.error(f"Error deleting conversational pathway in Bland AI: {e}", exc_info=True)
             raise
-    
-    def _format_nodes(self, nodes):
-        """
-        Format the nodes from the local model into the structure Bland AI expects.
-        """
-        formatted_nodes = []
-        for node_id, node_data in nodes.items():
-            formatted_node = {
-                "id": node_id,
-                "data": {
-                    "name": node_data.get("name", "Unnamed Node"),
-                    "text": node_data.get("text", "")
-                },
-                "type": node_data.get("type", "Default")
-            }
-            formatted_nodes.append(formatted_node)
-        return formatted_nodes
-
-    def _format_edges(self, edges):
-        """
-        Format the edges from the local model into the structure Bland AI expects.
-        """
-        formatted_edges = []
-        for edge_id, edge_data in edges.items():
-            formatted_edge = {
-                "id": edge_id,
-                "source": edge_data.get("source", ""),
-                "target": edge_data.get("target", ""),
-                "data": {
-                    "name": edge_data.get("name", "Unnamed Edge"),
-                    "prompt": edge_data.get("prompt", "")
-                }
-            }
-            formatted_edges.append(formatted_edge)
-        return formatted_edges
