@@ -75,7 +75,7 @@ class AgentSerializer(serializers.ModelSerializer):
         return value
 
     def validate_max_duration(self, value):
-        if value is not None and (not isinstance(value, int) or value <= 0):
+        if value <= 0:
             raise serializers.ValidationError("Max duration must be a positive integer.")
         return value
 
@@ -85,7 +85,12 @@ class AgentSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError("Tools must be a list of objects.")
             for tool in value:
                 if not isinstance(tool, dict) or not tool:
-                    raise serializers.ValidationError("Each tool must be a non-empty object with valid configurations.")
+                    raise serializers.ValidationError("Each tool must be a non-empty object.")
+                # Further validation to check required keys
+                if 'tool_name' not in tool:
+                    raise serializers.ValidationError("Each tool must have a 'tool_name'.")
+                if 'description' not in tool:
+                    raise serializers.ValidationError("Each tool must have a 'description'.")
         return value
     
     def create(self, validated_data):
@@ -112,8 +117,7 @@ class AgentSerializer(serializers.ModelSerializer):
             setattr(instance, attr, value)
             
         instance.script = html_to_script(instance.prompt)
-        instance.version += 1
-        
+                
         try:
             instance.full_clean()  # Perform model validation
             instance.save()
@@ -148,6 +152,24 @@ class ConversationalPathwaySerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("name cannot be empty or blank.")
         return value
     
+    def validate_nodes(self, value):
+        """
+        Validates that the 'nodes' field is a dictionary.
+        Raises a ValidationError if 'nodes' is not a dictionary.
+        """
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("Nodes must be a dictionary.")
+        return value
+
+    def validate_edges(self, value):
+        """
+        Validates that the 'edges' field is a dictionary.
+        Raises a ValidationError if 'edges' is not a dictionary.
+        """
+        if not isinstance(value, dict):
+            raise serializers.ValidationError("Edges must be a dictionary.")
+        return value
+    
     def create(self, validated_data):
         """
         Creates a new ConversationalPathway instance.
@@ -169,9 +191,5 @@ class ConversationalPathwaySerializer(serializers.ModelSerializer):
         instance.nodes = validated_data.get('nodes', instance.nodes)
         instance.edges = validated_data.get('edges', instance.edges)
         
-        instance.version += 1  # Increment version
-
         instance.save()
-        
-        print(instance)
         return instance
