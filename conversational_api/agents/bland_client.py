@@ -5,7 +5,6 @@ import logging
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 from .serializers import AgentSerializer
-from .utils import clean_payload
 from rest_framework.exceptions import APIException
 import json
 

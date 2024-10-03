@@ -16,18 +16,3 @@ def html_to_script(html_input):
     soup = BeautifulSoup(cleaned_html, 'html.parser')
     text = soup.get_text(separator='\n')  # Preserves line breaks
     return text.strip()
-
-def clean_payload(data):
-    """
-    Recursively remove keys with None, empty strings, empty lists, or empty dictionaries.
-    """
-    if isinstance(data, dict):
-        return {
-            key: clean_payload(value)
-            for key, value in data.items()
-            if value not in [None, '', [], {}]
-        }
-    elif isinstance(data, list):
-        return [clean_payload(item) for item in data if item not in [None, '', {}, []]]
-    else:
-        return data
