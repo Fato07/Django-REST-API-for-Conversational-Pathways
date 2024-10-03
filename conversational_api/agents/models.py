@@ -28,25 +28,17 @@ class Agent(models.Model):
         super().save(*args, **kwargs)
 
 class ConversationalPathway(models.Model):
-    # Name and description of the pathway
-    name = models.CharField(max_length=255, default='default_name')
+    name = models.CharField(max_length=255)
     description = models.TextField(null=True, blank=True)
-
-    # Bland AI-specific fields(Agent)
     bland_ai_pathway_id = models.CharField(max_length=255, unique=True, null=True, blank=True)
-
-    # Optional fields for storing the pathway's structure (nodes and edges)
     nodes = models.JSONField(null=True, blank=True)  # Stores nodes as a JSON structure
     edges = models.JSONField(null=True, blank=True)  # Stores edges as a JSON structure
-
-    # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     version = models.IntegerField(default=0)
 
-    
     class Meta:
         ordering = ['created_at'] 
-
-    def __str__(self):
-        return self.name    
+        
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)

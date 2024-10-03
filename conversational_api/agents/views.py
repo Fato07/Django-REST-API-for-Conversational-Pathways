@@ -48,6 +48,7 @@ class AgentViewSet(viewsets.ModelViewSet):
 
         except APIException as e:
             logger.error(f"APIException during agent creation: {e}", exc_info=True)
+            agent.delete()
             raise 
     
     def perform_update(self, serializer):
@@ -177,14 +178,22 @@ class ConversationalPathwayViewSet(viewsets.ModelViewSet):
         """
         Called when saving a new ConversationalPathway instance. Synchronizes with Bland AI.
         """
-        pathway = serializer.save()
         client = BlandClient()
         try:
-            bland_ai_pathway_id = client.create_conversational_pathway(pathway)
-            pathway.bland_ai_pathway_id = bland_ai_pathway_id
-            pathway.save()
-        except Exception as e:
-            logger.error(f"Error synchronizing pathway with Bland AI: {e}")
+            with transaction.atomic():
+                #save the pathway locally
+                pathway = serializer.save()
+                logger.info(f"Conversational Pathway '{pathway.name}' created locally with ID {pathway.id}.")
+
+                # Create the pathway in Bland AI
+                bland_ai_pathway_id = client.create_conversational_pathway(pathway, self.request.data)
+                
+                pathway.bland_ai_pathway_id = bland_ai_pathway_id
+                pathway.save()
+                logger.info(f"Conversational Pathway '{pathway.name}' synchronized with Bland AI, bland_ai_id: {bland_ai_pathway_id}.")
+
+        except APIException as e:
+            logger.error(f"APIException during pathway creation: {e}", exc_info=True)
             pathway.delete()
             raise
 

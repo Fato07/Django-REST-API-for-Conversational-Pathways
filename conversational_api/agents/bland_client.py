@@ -4,7 +4,7 @@ import os
 import logging
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from .serializers import AgentSerializer
+from .serializers import AgentSerializer, ConversationalPathway, ConversationalPathwaySerializer
 from rest_framework.exceptions import APIException
 import json
 
@@ -43,6 +43,19 @@ class BlandClient:
         cleaned_data = {key: data[key] for key in request_data if key in data}
         
         return cleaned_data
+    
+    def _prepare_pathway_payload(self, agent, request_data):
+        """
+        Prepares the JSON payload for creating or updating an agent in Bland AI.
+        Only includes fields specified in the request data.
+        """
+        serializer = ConversationalPathwaySerializer(agent)
+        data = serializer.data
+        
+        # Filter out fields that were not in the original request
+        cleaned_data = {key: data[key] for key in request_data if key in data}
+        
+        return cleaned_data
 
         
     def create_agent(self, agent, request_data):
@@ -54,7 +67,7 @@ class BlandClient:
         payload = self._prepare_agent_payload(agent, request_data)
 
         try:
-            logger.info(f"Requesting URL: {url}")
+            logger.info(f"Creating agnet at URL: {url}")
             logger.info(f"Request Payload: {json.dumps(payload, indent=4)}")
             
             # Send the request
@@ -154,24 +167,27 @@ class BlandClient:
                 logger.error(f"Bland AI response status code: {e.response.status_code}")
                 logger.error(f"Bland AI response text: {e.response.text}")
     
-    def create_conversational_pathway(self, pathway):
+    def create_conversational_pathway(self, pathway, request_data):
         """
         Create a conversational pathway in Bland AI.
         """
         url = f"{self.base_url}/convo_pathway/create"
-        payload = {
-            "name": pathway.name,
-            "description": pathway.description,
-        }
+        payload = self._prepare_pathway_payload(pathway, request_data)
 
         try:
             logger.info(f"Creating conversational pathway at URL: {url}")
-            logger.info(f"Request Payload: {payload}")
-
+            logger.info(f"Request Payload: {json.dumps(payload, indent=4)}")
+            
             # Send the request
             response = self.session.post(url, json=payload, timeout=30)
             
-             # Log the response status code and body
+            if response.status_code == 200:
+                logger.info(f"Conversational Pathway Created in Bland Systems successfully")
+                 # Log the parsed response
+                response_data = response.json()
+                logger.info(f"Pathway Data: {json.dumps(response_data, indent=4)}")
+                
+            # Log the response status code and body
             logger.info(f"Response Status Code: {response.status_code}")
             logger.info(f"Response Text: {response.text}")
 

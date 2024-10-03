@@ -122,6 +122,15 @@ class AgentSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(e.message_dict)
     
 class ConversationalPathwaySerializer(serializers.ModelSerializer):
+    
+    name = serializers.CharField(required=True, allow_blank=False)
+    description = serializers.CharField(required=False, allow_blank=True)
+    bland_ai_pathway_id = serializers.CharField(read_only=True)
+    nodes = serializers.JSONField(required=False, default=dict)
+    edges = serializers.JSONField(required=False, default=dict)
+    created_at = serializers.DateTimeField(read_only=True)
+    updated_at = serializers.DateTimeField(read_only=True)
+
     class Meta:
         model = ConversationalPathway
         fields = [
@@ -130,13 +139,26 @@ class ConversationalPathwaySerializer(serializers.ModelSerializer):
         ]
         
         read_only_fields = ['id', 'bland_ai_pathway_id', 'created_at', 'updated_at']
-
+    
+    def validate_name(self, value):
+        """
+        Ensure that the name is not empty or only whitespace.
+        """
+        if not value.strip():
+            raise serializers.ValidationError("name cannot be empty or blank.")
+        return value
+    
     def create(self, validated_data):
         """
         Creates a new ConversationalPathway instance.
         """
-        pathway = ConversationalPathway.objects.create(**validated_data)
-        return pathway
+        try: 
+            pathway = ConversationalPathway(**validated_data)
+            pathway.full_clean() # Perform model validation
+            pathway.save()
+            return pathway
+        except DjangoValidationError as e:
+            raise serializers.ValidationError(e.message_dict) 
 
     def update(self, instance, validated_data):
         """
