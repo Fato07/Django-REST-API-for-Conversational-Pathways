@@ -45,7 +45,7 @@
 Before you begin, ensure you have met the following requirements:
 
 - **Python 3.8+**: The project is built using Python 3.8 or higher.
-- **PostgreSQL**: A PostgreSQL database instance for development.
+- **PostgreSQL**: A Supbase PostgreSQL database instance for development (https://supabase.com).
 - **Git**: Version control system to clone the repository.
 - **Virtual Environment**: Recommended to use `venv` or `virtualenv`.
 
