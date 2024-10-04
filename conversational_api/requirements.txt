@@ -1,8 +1,10 @@
 beautifulsoup4==4.12.3
+bleach==6.1.0
 dj_database_url==2.2.0
 Django==5.1.1
 djangorestframework==3.15.2
-drf_nested_routers==0.94.1
 drf_yasg==1.21.7
+pytest==8.3.3
 python-dotenv==1.0.1
 Requests==2.32.3
+urllib3==2.2.3
